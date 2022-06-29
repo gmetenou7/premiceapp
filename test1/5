@@ -1,0 +1,137 @@
+/***VARIATION DU CA SUR UNE PERIODE DANS L'ENTREPRISE EN GENERAL DEBUT */
+
+					/** liste des caisse de l'entreprise pour afficher les variation du ca de chaque caisse le jour le jour*/
+					$caisses = $this->commerce->all_caisse_entreprise($matricule);
+					if(!empty($caisses)){
+						foreach ($caisses as $key => $value){
+
+							/**informations nécessaires */
+							$abrev = array('RC','RT','BR'); 
+
+							/**liste des dates entre 2 dates */
+							$date1= strtotime($debut1); //Premiere date
+							$date2= strtotime($fin1); //Deuxieme date
+							$nbjour=($date2-$date1)/60/60/24;//Nombre de jours entre les deux
+
+							/**on selectionne l'agance de la caisse*/
+							$agence_caisse = $this->commerce->agence_caisse($value['code_caisse'],$matricule);
+							if(!empty($agence_caisse)){
+
+								$outputs .= '
+								<ul class="list-group">
+									<li class="list-group-item active" aria-current="true">'.$agence_caisse['nom_ag'].' '.$value['code_caisse'].' </li>
+								</ul>
+								<table class="table table-striped table-hover">
+								<thead>
+									<tr>
+										<th scope="col">Date</th>
+										<th scope="col">CA</th>
+										<th scope="col">Taux de variation</th>
+										<th scope="col">Observation</th>
+									</tr>
+								</thead>
+								<tbody>
+								';
+
+								/**initialiser la ca pour trouver le taux de variation du CA */
+								$cainica = 0;
+								for($i=0;$i<=$nbjour;$i++){
+
+									/**données utile */
+									$date = date('Y-m-d',$date1);
+
+									$cadaterc = 0; $cadatert = 0;
+									$cadatebr = 0; $cadatesc = 0;
+									$cadateec = 0;
+
+									/**on selectionne les document d'une entreprise pour une caisse d'une agence sur une période donné*/
+									$docagencecaisseperiodes = $this->home->docventecaisseagenceperiode($value['code_caisse'],$matricule,$agence_caisse['matricule_ag'],$abrev, $date);
+									if(!empty($docagencecaisseperiodes)){
+										foreach ($docagencecaisseperiodes as $key => $values){
+											$dbdateca = date("Y-m-d", strtotime($values['date_creation_doc']));
+											
+											$initial = substr($values['code_document'], 0, 2);
+											if($initial == 'RT'){
+												if($date == $dbdateca){
+													$cadatert += $values['pt_ttc_document']; 
+												}
+											}
+
+											if($initial == 'RC'){
+												if($date == $dbdateca){
+													if($values['dette_restante'] == 0){
+														$cadaterc += $values['pt_ttc_document'];
+													}
+												}
+											}
+
+											if($initial == 'BR'){
+												if($date == $dbdateca){
+													$cadatebr += $values['pt_ttc_document'];
+												}
+											}
+										}
+									}
+
+
+									/*on selectionne les sortie de caisse d'une agence d'une entreprise, sur une peériode donné*/
+									$sortieagencecaisseperiode = $this->home->sortiecaisseagenceperiode($value['code_caisse'],$matricule,$agence_caisse['matricule_ag'], $date);
+									if(!empty($sortieagencecaisseperiode)){
+										foreach($sortieagencecaisseperiode as $content){
+											$dbdateca = date("Y-m-d", strtotime($content['creer_le_sorti']));
+											if($date == $dbdateca){
+												$cadatesc += $content['montatnt_sorti'];
+											}
+										}
+									}
+
+
+									/*on selectionne les entrées de caisse d'une agence d'une entreprise, d'un client, sur une période donné*/
+									$entreragencecaisseperiode = $this->home->entrercaisseagenceperiode($value['code_caisse'],$matricule,$agence_caisse['matricule_ag'], $date);
+									if(!empty($entreragencecaisseperiode)){
+										foreach($entreragencecaisseperiode as $valenter){
+											$dbdateca = date("Y-m-d", strtotime($valenter['dateentrer']));
+											if($date == $dbdateca){
+												$cadateec += $valenter['montant'];
+												//$outputs .= $valenter['montant'].' -- '.$valenter['dateentrer'].'<br>';
+											}
+										}
+									}
+									
+									/***variriation du ca. formule = (CA HT N - CA HT N-1) * 100 / CA HT N-1 */
+									$caini = (($cadateec + $cadatert + $cadatebr) - $cadatesc);
+									$formule = ($cainica == 0)? '0':($caini - $cainica) * 100 / $cainica;
+									
+
+									if($caini!=0){
+
+										$vari = $formule<0?'<span class="badge bg-danger">'.number_format($formule,2,",",".").' %</span>':'<span class="badge bg-success">'.number_format($formule,2,",",".").'  %</span>';
+										$observ = $formule<0?'<span class="badge bg-danger">le CA à diminué par rapport au mois précédent</span>':'<span class="badge bg-success">le CA à augmenté par rapport au mois précédent</span>';
+
+										$outputs .= '<tr>
+														<th scope="row">'.$date.'</th>
+														<td>'.number_format($caini,2,",",".").'</td>
+														<td>'.$vari.'</td>
+														<td>'.$observ.'</td>
+													</tr>';
+									}
+											
+										
+									
+
+									$cainica = (($cadateec + $cadatert + $cadatebr) - $cadatesc);
+
+
+									$date1+=60*60*24; //On additionne d'un jour (en seconde)
+								}
+
+								$outputs .= '
+									</tbody>
+								</table>';
+							}
+						}
+					}else{
+						$outputs .="le système ne trouve aucune caisse pour l'entreprise";
+					}
+				
+					/***VARIATION DU CA SUR UNE PERIODE DANS L'ENTREPRISE EN GENERAL FIN */

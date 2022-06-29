@@ -1,0 +1,135 @@
+if(preg_match("/^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$/",$debut) && preg_match("/^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$/",$fin)){
+                    
+				    /**informations utile */
+                    $matricule = session('users')['matricule'];
+                    $agence = session('users')['matricule_ag'];
+            
+            		$sommeglobal = 0;
+            		$valdoc="";
+            		$valdocarray = array();
+            		/**----------chiffre d'affaire d'une entreprise et ou des agences d'une entreprise sur une péeriode debut --------------*/
+            		/**affiche la liste des caisses en fonction de l'entreprise*/
+            		if(!empty($caisse)){
+            				$debut = $debut.' 00:00:00';
+				            $fin =  $fin.' 23:59:59';
+            
+            				/**informations nécessaires */
+            				$abrev = array('RC','RT','BR'); 
+            				//$abrev = array('SC','RC','RT','BR');
+            				$totalrc=0; $totalrt=0; $totalbr=0; $totalsc=0;
+            				$totalsrc=0; $totalsrt=0; $totalsbr=0; $totalssc=0;
+            				
+            				/**on selectionne l'agance de la caisse*/
+            				$agence_caisse = $this->commerce->agence_caisse($caisse,$matricule);
+            				if(!empty($agence_caisse)){
+            					$sommesc=0;
+            					$sommev=0;
+            					/**informations sur l'agence pour la caisse selectionné*/
+            					$agencearray = $agence_caisse;
+            					
+            					/**on selectionne les document d'une entreprise pour une caisse d'une agence sur une période donné*/
+            					$docagencecaisseperiode = $this->commerce->docventecaisseagenceperiode($caisse,$matricule,$agencearray['matricule_ag'],$abrev, $debut,$fin);
+            					if(!empty($docagencecaisseperiode)){
+            						foreach ($docagencecaisseperiode as $key => $values) {
+            							/**on verifi que c'est un reglement client ou pas*/
+            							$rest = substr($values['code_document'], 0, 2);
+            							if($rest == "RC"){
+            								/**si c'est un reglement client, on s'assure que c'est pas une dette*/
+            								if($values['dette_restante'] == 0){
+            									$totalsrc += $values['pt_ttc_document'];
+            								} 
+            							}else if($rest == "RT"){
+            								$totalsrt += $values['pt_ttc_document'];
+            							}else if($rest == "BR"){
+            								$totalsbr += $values['pt_ttc_document'];
+            							} 
+            						}
+            						$sommev = ($totalsrc + $totalsrt + $totalsbr);
+            					}
+            					
+            					/*on selectionne les sortie de caisse d'une agence d'une entreprise, sur une peériode donné*/
+            					$sortieagencecaisseperiode = $this->commerce->sortiecaisseagenceperiode($caisse,$matricule,$agencearray['matricule_ag'], $debut,$fin);
+            								
+            					if(!empty($sortieagencecaisseperiode)){
+            						foreach($sortieagencecaisseperiode as $value){
+            							$totalssc += $value['montatnt_sorti'];
+            						} 
+            						$sommesc = $totalssc;
+            					}
+            
+            					/**ca total dans chaque caisse */
+            					$total = ($sommev - $sommesc);
+            
+            					$valdoc = array(
+            						'agence' => $agencearray['nom_ag'],
+            						'totalca' => $total
+            					);
+            					$valdocarray[] = $valdoc;
+            					$sommeglobal += $total;
+            				}
+            		}
+            		/**----------chiffre d'affaire d'une entreprise et ou des agences d'une entreprise sur une péeriode fin --------------*/
+            
+            		/**chiffre d'affaire total de l'entreprise(somme des chiffres d'affaire de chaque agence) */
+            		$data['caen'] = $sommeglobal;
+            		
+            		/**chiffre d'affaire de chaque agence de l'entreprise */
+            		$data['caag'] = $valdocarray;
+				    
+				            $debut1 = date("Y-m-d", strtotime($start));
+                    $fin1 = date("Y-m-d", strtotime($end));
+                    
+                    foreach($data['caag'] as $caval){
+                        $output .= '
+                            <div class="col-sm-6 col-lg-4 mb-4">
+                              <div class="card text-center">
+                                <div class="card-body">
+                                  <h5 class="card-title">'.strtoupper($caval['agence']).'</h5>
+                                  <p class="card-text"><small class="text-muted"> Période du '.$debut1.' 00:00:00 au '.$fin1.' 23:59:59</small></p>
+                                  <h1 class="card-text">XAF '.number_format($caval['totalca'],2,",",".").'</h1>
+                                </div>
+                              </div>
+                            </div>
+                        ';
+                    }
+				     $array = array(
+                        'success' => '
+                            <div class="col-sm-6 col-lg-4 mb-4">
+                              <div class="card text-center">
+                                <div class="card-body">
+                                  <h5 class="card-title">'.strtoupper(session('users')['nom']).'</h5>
+                                  <p class="card-text"><small class="text-muted"> Période du '.$debut1.' 00:00:00 au '.$fin1.' 23:59:59</small></p>
+                                  <h1 class="card-text">XAF '.number_format($data['caen'],2,",",".").'</h1>
+                                </div>
+                              </div>
+                            </div>',
+                        'caisseca' => $output
+                    );
+                    
+                }
+
+
+
+
+
+
+                /*on selectionne les entrées de caisse d'une agence d'une entreprise, d'un client, sur une période donné*/
+                            $entreragencecaisseperiode = $this->commerce->entrercaisseagenceperiode($code_caisse,$matricule,$agencearray['matricule_ag'], $debut,$fin);
+                            //debug($entreragencecaisseperiode); die();
+                            if(!empty($entreragencecaisseperiode)){
+                               foreach($entreragencecaisseperiode as $value){
+                                   $totalsec += $value['montant'];
+                                   
+                                   /**ON SELECTIONNE LE CLIENT EN FONCTION DU code du client et de l'entreprise**/
+                                   $client = $this->costomer->single_client($value['client_enter']);
+                                   $valdocec = array(
+                                        'date' => $value['dateentrer'],
+                                        'codedoc' => $value['matricule_enter'],
+                                        'client' => $client['nom_cli'],
+                                        'nomdoc' => $value['nom_enter'],
+                                        'montant' => $value['montant']
+                                    ); 
+                                    $valdocecarray[] = $valdocec;
+                               } 
+                               $totalsecarray =  $totalsec;
+                            }

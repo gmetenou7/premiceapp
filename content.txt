@@ -1,0 +1,37 @@
+10 420 000 57.797.581,90
+
+10.590.050,00
+3.100.000,00
+
+
+[id] => 17
+            [codeentrercaisse] => EC-DOC-220HR2903W6Q
+            [montant] => 121000
+            [motif_entre_caisse] => Reglement client
+            [employe] => 217OTJSI6G2P
+            [dateentrer] => 2022-01-24 16:40:44
+            [dateentrer_modifier] => 
+            [matricule_enter] => EC-DOC-220HR2903W6Q
+            [nom_enter] => EC-DOCUMENT-TEC-222UWX170QXB-24-01-2022
+            [type_doc_enter] => 21LA30NRD1MB
+            [agence_enter] => 
+            [entreprise_enter] => 21F8KCCE4NFZ
+            [client_enter] => 22Y0JIV3ZOPM3R
+            [montant_enter] => 121000
+            [caisse_enter] => 21236I50IC1C
+            [employe_enter] => 217OTJSI6G2P
+            [creer_le_enter] => 2022-01-24 16:40:44
+            [modifier_le_enter] => 
+            [matricule_en] => 21F8KCCE4NFZ
+            [etat_en] => on
+            [nom_en] => PREMICE COMPUTER GROUPE
+            [adresse_en] => Yaoundé camer face camer-co
+            [activite_en] => commerce d'équipement informatique
+            [form_juridique_en] => SARL
+            [pays_en] => Cameroun
+            [telephone_en] => +237 682187218,
+            [email_en] => contact@premicecomputer.com
+            [site_internet_en] => https://premicecomputer.com/
+            [password_en] => $2y$10$pSyfWnU64/dwESrk3kctf.zEFEU9U6dxs.yBtS8VsqXK/9/qmvLUK
+            [creer_le_en] => 2021-10-07 13:13:44
+            [modifier_le_en] => 2021-10-07 13:48:46

@@ -1,0 +1,499 @@
+if(!empty($query)){
+				$output= "";
+
+				/***TRAITEMENT DES ARTICLES LES PLUS VENDU EN FONCTION DES ARTICLES, de la famille et des agence */
+					/**1: en fonction des articles */
+					
+					/**liste des artricles de la table articlecomptable en fonction de l'entreprise et de la période */
+					$articlecomptable = $this->home->articlescomptable($matricule,$debut,$fin);
+					if(!empty($articlecomptable)){
+						foreach ($articlecomptable as $key => $artscomptable) {
+							/**on verifie le type de l'article grace au code du document*/
+							$typedoc = substr($artscomptable['codedocumentarticle'], 0, 2);
+							if($typedoc == "RT"){
+								$artcomptablert[] = $artscomptable;
+							}
+							if($typedoc == "RC"){
+								if($artscomptable['detterestantearticle']>0){
+									$artcomptablercdette[] = $artscomptable;
+								}
+								if($artscomptable['detterestantearticle']==0){
+									$artcomptablercsansdette[] = $artscomptable;
+								}
+							}
+							if($typedoc == "BR"){
+								/**pour mieux faire les calculs par la suite, on vas diviser les bon de retour en deux (RT et RC) */
+								$typedocbr = substr($artscomptable['nomdocarticle'], 0, 2);
+								if($typedocbr == "RT"){
+									$artcomptablebrrt[] = $artscomptable;
+								}
+								if($typedocbr == "RC"){
+									$artcomptablebrrc[] = $artscomptable;
+								}
+								
+							}
+						}
+					}
+
+
+					/**liste des articles de l'entreprise */
+					$articles = $this->home->articleentreprise($matricule);
+					if(!empty($articles)){
+						foreach ($articles as $key => $arts){
+							
+							/**RT */
+							$qte=0;
+							$prixtht=0;
+							if(!empty($artcomptablert)){
+								foreach ($artcomptablert as $key => $artsrt){
+									if($artsrt['codearticle'] == $arts['matricule_art']){
+										$qte+=$artsrt['quantitearticle'];
+										$prixtht+=$artsrt['prixthtarticle'];
+									}
+								}
+
+								$rt =  array(
+									'codearticle'=>$arts['matricule_art'],
+									'designationarticle'=>$arts['designation'],
+									'qtearticle'=>$qte,
+									'prixthtarticle'=>$prixtht,
+								);
+							}
+							if(!empty($rt) && $rt['qtearticle'] !=0){
+								$statrt[] = $rt;
+							}
+
+							/**BR RT*/
+							$qtebrrt=0;
+							$prixthtbrrt=0;
+							if(!empty($artcomptablebrrt)){
+								foreach($artcomptablebrrt as $key => $artsbrrt){
+									if($artsbrrt['codearticle'] == $arts['matricule_art']){
+										$qtebrrt+=$artsbrrt['quantitearticle'];
+										$prixthtbrrt+=$artsbrrt['prixthtarticle'];
+									}
+								}
+								$brrt =  array(
+									'codearticle'=>$arts['matricule_art'],
+									'designationarticle'=>$arts['designation'],
+									'qtearticle'=>$qtebrrt,
+									'prixthtarticle'=>$prixthtbrrt,
+								);
+							}
+							if(!empty($brrt) && $brrt['qtearticle'] !=0){
+								$statbrrt[] = $brrt;
+							}
+							/**BR RC*/
+							$qtebrrc=0;
+							$prixthtbrrc=0;
+							if(!empty($artcomptablebrrc)){
+								foreach($artcomptablebrrc as $key => $artsbrrc){
+									if($artsbrrc['codearticle'] == $arts['matricule_art']){
+										$qtebrrc+=$artsbrrc['quantitearticle'];
+										$prixthtbrrc+=$artsbrrc['prixthtarticle'];
+									}
+								}
+								$brrc =  array(
+									'codearticle'=>$arts['matricule_art'],
+									'designationarticle'=>$arts['designation'],
+									'qtearticle'=>$qtebrrc,
+									'prixthtarticle'=>$prixthtbrrc,
+								);
+							}
+							if(!empty($brrc) && $brrc['qtearticle'] !=0){
+								$statbrrc[] = $brrc;
+							}
+
+
+							/**RC sans dette*/
+							$qtercsd=0;
+							$prixthtrcsd=0;
+							if(!empty($artcomptablercsansdette)){
+								foreach($artcomptablercsansdette as $key => $artsrcsd){
+									if($artsrcsd['codearticle'] == $arts['matricule_art']){
+										$qtercsd+=$artsrcsd['quantitearticle'];
+										$prixthtrcsd+=$artsrcsd['prixthtarticle'];
+									}
+								}
+								$rcsd =  array(
+									'codearticle'=>$arts['matricule_art'],
+									'designationarticle'=>$arts['designation'],
+									'qtearticle'=>$qtercsd,
+									'prixthtarticle'=>$prixthtrcsd,
+								);
+							}
+							if(!empty($rcsd) && $rcsd['qtearticle'] !=0){
+								$statrcsd[] = $rcsd;
+							}
+							/**RC avec dette*/
+							$qtercad=0;
+							$prixthtrcad=0;
+							if(!empty($artcomptablercdette)){
+								foreach($artcomptablercdette as $key => $artsrcad){
+									if($artsrcad['codearticle'] == $arts['matricule_art']){
+										$qtercad+=$artsrcad['quantitearticle'];
+										$prixthtrcad+=$artsrcad['prixthtarticle'];
+									}
+								}
+								$rcad =  array(
+									'qtearticle'=>$qtercad,
+									'codearticle'=>$arts['matricule_art'],
+									'designationarticle'=>$arts['designation'],
+									'prixthtarticle'=>$prixthtrcad,
+								);
+							}
+							if(!empty($rcad) && $rcad['qtearticle'] !=0){
+								$statrcad[] = $rcad;
+							}	
+						}
+					}
+
+					/**a partir d'ici on a deja les quantité et les montant totales de chaque article quelque soit sont type de document
+					 * si c'est le br en rt on soustrait dans le rt
+					 * si c'est le br en rc on soustrait dans le rt
+					 * si c'est le rc en réglé on additionne dans le rt
+					 * les rc en dette sont déjà prêt a être affiche en article les plus vendu en dette
+					 */
+
+					/**si c'est le br en rt on soustrait dans le rt */
+					if(!empty($statrt)){
+						$qtefinrt="";
+						$prixthtfinrt="";
+						foreach ($statrt as $key => $valuertfin){
+							//debug($valuertfin['codearticle'].' '.$valuertfin['qtearticle'].' '.$valuertfin['prixthtarticle']);
+							if(!empty($statbrrt)){
+								foreach ($statbrrt as $key => $valuebrrt){
+									if($valuebrrt['codearticle'] == $valuertfin['codearticle']){
+										$qtefinrt = ($valuertfin['qtearticle'] - $valuebrrt['qtearticle']);
+										$prixthtfinrt=($valuertfin['prixthtarticle'] + $valuebrrt['prixthtarticle']);
+									}
+								}
+							}
+							$qtebrrt = !empty($qtefinrt)?$qtefinrt:$valuertfin['qtearticle'];
+							$prixbrrt = !empty($prixthtfinrt)?$prixthtfinrt:$valuertfin['prixthtarticle'];
+							$rtbr[] =  array(
+								'codearticle'=>$valuertfin['codearticle'],
+								'designationarticle'=>$valuertfin['designationarticle'],
+								'qtearticle'=>$qtebrrt,
+								'prixthtarticle'=>$prixbrrt,
+							);
+						}
+					}
+
+					/**si c'est le br en rc on soustrait dans le rt */
+					if(!empty($statrcsd)){
+						$qtefinrc="";
+						$prixthtfinrc="";
+						foreach ($statrcsd as $key => $valuercfin){
+							//debug($valuercfin['codearticle'].' '.$valuercfin['qtearticle'].' '.$valuercfin['prixthtarticle']);
+							if(!empty($statbrrc)){
+								foreach($statbrrc as $key => $valuebrrc){
+									if($valuebrrc['codearticle'] == $valuercfin['codearticle']){
+										$qtefinrc = ($valuercfin['qcearticle'] - $valuebrrc['qtearticle']);
+										$prixthtfinrc=($valuercfin['prixthtarticle'] + $valuebrrc['prixthtarticle']);
+									}
+								}
+							}
+							$qtebrrc = !empty($qtefinrc)?$qtefinrc:$valuercfin['qtearticle'];
+							$prixbrrc = !empty($prixthtfinrc)?$prixthtfinrc:$valuercfin['prixthtarticle'];
+							$rcbr[] =  array(
+								'codearticle'=>$valuercfin['codearticle'],
+								'designationarticle'=>$valuercfin['designationarticle'],
+								'qtearticle'=>$qtebrrc,
+								'prixthtarticle'=>$prixbrrc,
+							);
+						}
+					}
+
+
+					/**a l'issu de ce qui précède, on a un rt sans br et un rc sans br et un rc réglé est un rt. on additionne les valeurs(qte, prix) identique */
+					/**si c'est le rc en réglé on additionne dans le rt */
+					if(!empty($rtbr)){
+						$qtefinrtrc="";
+						$prixthtfinrtrc="";
+						foreach ($rtbr as $key => $valuertrcfin){
+							//debug($valuertrcfin['codearticle'].' '.$valuertrcfin['qtearticle'].' '.$valuertrcfin['prixthtarticle']);
+							if(!empty($rcbr)){
+								foreach($rcbr as $key => $valuertrc){
+									if($valuertrc['codearticle'] == $valuertrcfin['codearticle']){
+										$qtefinrtrc = ($valuertrcfin['qtearticle'] + $valuertrc['qtearticle']);
+										$prixthtfinrtrc=($valuertrcfin['prixthtarticle'] + $valuertrc['prixthtarticle']);
+									}
+								}
+							}
+							$qtertrc = !empty($qtefinrtrc)?$qtefinrtrc:$valuertrcfin['qtearticle'];
+							$prixrtrc = !empty($prixthtfinrtrc)?$prixthtfinrtrc:$valuertrcfin['prixthtarticle'];
+							$rtrc[] =  array(
+								'qtearticle'=>$qtertrc,
+								'codearticle'=>$valuertrcfin['codearticle'],
+								'designationarticle'=>$valuertrcfin['designationarticle'],
+								'prixthtarticle'=>$prixrtrc,
+							);
+						}
+					}
+
+
+					/**on a desormais la liste des rt additionné des rc réglé qui apparaissent egalement dans les rt
+					 * maintenant on il faut la liste des rc réglé qui ne sont pas dans les rt additionné au rc
+					 * lors de l'afficharge, on vas afficher les rtrc, et les rcbr qui ne sont pas dans les rtrc
+					 * on vas egalement afficher la liste des statrcad
+					*/
+
+					/*maintenant on il faut la liste des rc réglé qui ne sont pas dans les rt additionné au rc*/
+					function findMissing( $a, $b, $n, $m){
+						for ( $i = 0; $i < $n; $i++){
+							for ($j = 0; $j < $m; $j++)
+								if ($a[$i]['codearticle'] == $b[$j]['codearticle'])
+									break;
+							if ($j == $m)
+								$rtrc[] =  array(
+									'qtearticle'=>$a[$i]['qtearticle'],
+									'codearticle'=>$a[$i]['codearticle'],
+									'designationarticle'=>$a[$i]['designationarticle'],
+									'prixthtarticle'=>$a[$i]['prixthtarticle'],
+								);
+						}
+
+						return $rtrc;
+					}
+
+					if(!empty($rcbr) && !empty($rtrc)){
+						$a =$rcbr;
+						$b=$rtrc;
+						$n = count($a);
+						$m = count($b);
+
+						/**liste des rc qui ne sont pas dans les rt additionné */
+						$rcnonrt = findMissing($a, $b, $n, $m);
+					}
+
+
+					/*$famille_mat = $this->input->post('famille');
+					if(empty($famille_mat)){*/
+					
+
+						arsort($rtrc);
+						$output= "";
+						$numero=0;
+						$total=0;
+						if(!empty($rtrc)){
+							$output .='
+							<tr>
+								<td colspan="5"><h1>ARTICLE LES PLUS VENDU</h1></td>
+							</tr>
+							';
+
+							foreach ($rtrc as $key => $value) {
+								$numero+=1;
+								$total+=$value['prixthtarticle'];
+								$output .='
+									<tr>
+										<td>'.$numero.'</td>
+										<td>'.$value['codearticle'].'</td>
+										<td>'.$value['designationarticle'].'</td>
+										<td>'.$value['qtearticle'].'</td>
+										<td>'.number_format($value['prixthtarticle'],2,",",".").'</td>
+									</tr>';
+							}
+						}
+
+						$output .='
+						<tr>
+							<td></td>
+							<td></td>
+							<td></td>
+							<td></td>
+							<td></td>
+						</tr>
+						';
+
+
+						arsort($rcnonrt);
+						if(!empty($rcnonrt)){
+							foreach ($rcnonrt as $key => $values){
+								$numero+=1;
+								$total+=$values['prixthtarticle'];
+								$output .='
+									<tr>
+										<td>'.$numero.'</td>
+										<td>'.$values['codearticle'].'</td>
+										<td>'.$values['designationarticle'].'</td>
+										<td>'.$values['qtearticle'].'</td>
+										<td>'.$values['prixthtarticle'].'</td>
+									</tr>';
+							}
+						}
+
+						$output .='
+							<tr>
+								<td colspan="4"><h1>TOTAL</h1></td>
+								<td><h1>'.number_format($total,2,",",".").'</h1></td>
+							</tr>';
+
+							$output .='
+							<tr>
+								<td colspan="5"><h1>LISTE DES ARTICLES LES PLUS VENDU EN DETTE</h1></td>
+							</tr>
+							';
+
+
+						$numero=0;
+						$totaldette =0;
+						arsort($statrcad);
+						if(!empty($statrcad)){
+							foreach ($statrcad as $key => $value){
+								$numero+=1;
+								$totaldette+=$value['prixthtarticle'];
+								$output .='
+									<tr>
+										<td>'.$numero.'</td>
+										<td>'.$value['codearticle'].'</td>
+										<td>'.$value['designationarticle'].'</td>
+										<td>'.$value['qtearticle'].'</td>
+										<td>'.number_format($value['prixthtarticle'],2,",",".").'</td>
+									</tr>
+									';
+							}
+
+							$output .='
+								<tr>
+									<td colspan="4"><h1>TOTAL</h1></td>
+									<td><h1>'.number_format($totaldette,2,",",".").'</h1></td>
+								</tr>
+								';
+						}
+
+						$array = array(
+							'success' => $output,
+							'periode' => 'Articles les plus vendu sur la période allant de: '.$debut.' à '.$fin,
+							'famille' => ''
+						);
+						
+						
+					/*}else if(!empty($famille_mat)){
+
+						arsort($rtrc);
+						
+						$numero=0;
+						$total=0;
+						if(!empty($rtrc)){
+							$output .='
+							<tr>
+								<td colspan="5"><h1>ARTICLE LES PLUS VENDU</h1></td>
+							</tr>
+							';
+
+							foreach ($rtrc as $key => $value){
+
+								/**on test si ca correspond a la famille choisi *
+								$codefamille = $this->home->fam_article($value['codearticle']);
+								if($codefamille['mat_famille_produit'] == $famille_mat){
+
+									$numero+=1;
+									$total+=$value['prixthtarticle'];
+									$output .='
+										<tr>
+											<td>'.$numero.'</td>
+											<td>'.$value['codearticle'].'</td>
+											<td>'.$value['designationarticle'].'</td>
+											<td>'.$value['qtearticle'].'</td>
+											<td>'.number_format($value['prixthtarticle'],2,",",".").'</td>
+										</tr>';
+								}
+							}
+						}
+
+						$output .='
+						<tr>
+							<td></td>
+							<td></td>
+							<td></td>
+							<td></td>
+							<td></td>
+						</tr>
+						';
+
+
+						arsort($rcnonrt);
+						if(!empty($rcnonrt)){
+
+							foreach ($rcnonrt as $key => $values){
+
+								/**on test si ca correspond a la famille choisi *
+								$codefamille = $this->home->fam_article($values['codearticle']);
+								if($codefamille['mat_famille_produit'] == $famille_mat){
+
+									$numero+=1;
+									$total+=$values['prixthtarticle'];
+									$output .='
+										<tr>
+											<td>'.$numero.'</td>
+											<td>'.$values['codearticle'].'</td>
+											<td>'.$values['designationarticle'].'</td>
+											<td>'.$values['qtearticle'].'</td>
+											<td>'.$values['prixthtarticle'].'</td>
+										</tr>';
+								}
+							}
+							
+						}
+
+						$output .='
+							<tr>
+								<td colspan="4"><h1>TOTAL</h1></td>
+								<td><h1>'.number_format($total,2,",",".").'</h1></td>
+							</tr>';
+
+							$output .='
+							<tr>
+								<td colspan="5"><h1>LISTE DES ARTICLES LES PLUS VENDU EN DETTE</h1></td>
+							</tr>
+							';
+
+
+						$numero=0;
+						$totaldette =0;
+						arsort($statrcad);
+						if(!empty($statrcad)){
+							foreach ($statrcad as $key => $value) {
+
+								/**on test si ca correspond a la famille choisi *
+								$codefamille = $this->home->fam_article($value['codearticle']);
+								if($codefamille['mat_famille_produit'] == $famille_mat){
+
+									$numero+=1;
+									$totaldette+=$value['prixthtarticle'];
+									$output .='
+										<tr>
+											<td>'.$numero.'</td>
+											<td>'.$value['codearticle'].'</td>
+											<td>'.$value['designationarticle'].'</td>
+											<td>'.$value['qtearticle'].'</td>
+											<td>'.number_format($value['prixthtarticle'],2,",",".").'</td>
+										</tr>
+										';
+								}
+							}
+
+							$output .='
+								<tr>
+									<td colspan="4"><h1>TOTAL</h1></td>
+									<td><h1>'.number_format($totaldette,2,",",".").'</h1></td>
+								</tr>
+								';
+						}
+
+						$details = $this->stock->detail_famille($famille_mat);
+						$array = array(
+							'success' => $output,
+							'periode' => 'Articles les plus vendu sur la période allant de: '.$debut.' à '.$fin,
+							'famille' => 'FAMILLE :'.$details['nom_fam']
+						);
+					}*/
+			}else{
+				$array = array(
+					'success' => 'AUCUN ARTICLE TROUVER SUR CETTE PERIODE ET OU DANS CETTE FAMILLE',
+					'periode' => '',
+					'famille' => ''
+				);
+			}

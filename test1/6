@@ -1,0 +1,11 @@
+foreach ($artdocument as $key => $value){
+							
+							$artvente = $this->home->articledocumentvendu($value['code_document'],$value['code_article']);
+							
+							$arrayrt = array(
+								'code' => $artvente['code_article'],
+								'quantite' => $artvente['quantite'],
+								'tht' => $artvente['pt_HT']
+							);
+							
+						}

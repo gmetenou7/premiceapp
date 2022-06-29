@@ -1,0 +1,112 @@
+/**liste des documents de vente pour une entreprise et pour un type de document*/
+		$query = $this->home->documentventeperiode($abrev,$matricule);
+		if(!empty($query)){
+			/**on supprime tous les articles de la table "articlecomptable" en fonction du code de l'entreprise 
+			 * pour que les données restent a jour sans doubler ni ecrasé ceux qui existent
+			*/
+			$deleteinformations = $this->home->deletearticlecomptableinformation($matricule);
+			if($deleteinformations){
+				foreach($query as $key => $value){
+					/**les deux premières lettre du code de document permet de savoir de quel type de document il s'agit */
+					$typedoc = substr($value['code_document'], 0, 2);
+					
+					/**affiche le code du document */
+					//debug($value['code_document'].'<hr>');
+					
+					/**on insert dans la table en fonction du type de document */
+					if($typedoc == "RT"){
+						//on selectionne maintenant la liste des articles du document (en fonction du code de document) 
+						$artdocument = $this->home->articledocumentvente($value['code_document']);
+						if(!empty($artdocument)){
+							foreach ($artdocument as $key => $values){
+								/**on complete les informations sur les artiles en allant les prendre dans la table article*/
+								$articlecomplement = $this->home->singlearticleshow($values['code_article']);
+								
+								//on enregistre les articles dans la table "articlecomptable" de la BD pour traitement
+								$valinput = array(
+									"codearticle" => $values['code_article'],
+									"nomarticlecomptable" => $articlecomplement['designation'],
+									"famillearticlecomptable" => $articlecomplement['mat_famille_produit'],
+									"codedocumentarticle" => $values['code_document'],
+									"quantitearticle" => $values['quantite'],
+									"prixuhtarticle" => $values['pu_HT'],
+									"prixthtarticle" => $values['pt_HT'],
+									"nomdocarticle" => $values['nom_document'],
+									"matriculeentreprisearticle" => $values['code_en_art_doc'],
+									"depotdocarticle" => $values['depot_doc'],
+									"clientdocarticle" => $values['code_client_document'],
+									"agencedocarticle" => $values['code_agence_doc'],
+									"prixthtdocarticle" => $values['pt_ht_document'],
+									"prixtttcdocarticle" => $values['pt_ttc_document'],
+									"detterestantearticle" => $values['dette_restante'],
+									"datecreationarticle" => $values['date_creer_art_doc']
+								);
+								$response = $this->home->saveinformation($valinput);
+							}
+						}
+					}
+					if($typedoc == "RC"){
+						//on selectionne maintenant la liste des articles du document (en fonction du code de document) 
+						$artdocument = $this->home->articledocumentvente($value['code_document']);
+						if(!empty($artdocument)){
+							foreach ($artdocument as $key => $values){
+								/**on complete les informations sur les artiles en allant les prendre dans la table article*/
+								$articlecomplement = $this->home->singlearticleshow($values['code_article']);
+
+								//on enregistre les articles dans la table "articlecomptable" de la BD pour traitement
+								$valinputs = array(
+									"codearticle" => $values['code_article'],
+									"nomarticlecomptable" => $articlecomplement['designation'],
+									"famillearticlecomptable" => $articlecomplement['mat_famille_produit'],
+									"codedocumentarticle" => $values['code_document'],
+									"quantitearticle" => $values['quantite'],
+									"prixuhtarticle" => $values['pu_HT'],
+									"prixthtarticle" => $values['pt_HT'],
+									"nomdocarticle" => $values['nom_document'],
+									"matriculeentreprisearticle" => $values['code_en_art_doc'],
+									"depotdocarticle" => $values['depot_doc'],
+									"clientdocarticle" => $values['code_client_document'],
+									"agencedocarticle" => $values['code_agence_doc'],
+									"prixthtdocarticle" => $values['pt_ht_document'],
+									"prixtttcdocarticle" => $values['pt_ttc_document'],
+									"detterestantearticle" => $values['dette_restante'],
+									"datecreationarticle" => $values['date_creer_art_doc']
+								);
+								$response = $this->home->saveinformation($valinputs);
+							}
+						}
+					}
+					if($typedoc == "BR"){
+						//on selectionne maintenant la liste des articles du document (en fonction du code de document) 
+						$artdocument = $this->home->articledocumentvente($value['code_document']);
+						if(!empty($artdocument)){
+							foreach ($artdocument as $key => $values){
+								/**on complete les informations sur les artiles en allant les prendre dans la table article*/
+								$articlecomplement = $this->home->singlearticleshow($values['code_article']);
+
+								//on enregistre les articles dans la table "articlecomptable" de la BD pour traitement
+								$valinputs = array(
+									"codearticle" => $values['code_article'],
+									"nomarticlecomptable" => $articlecomplement['designation'],
+									"famillearticlecomptable" => $articlecomplement['mat_famille_produit'],
+									"codedocumentarticle" => $values['code_document'],
+									"quantitearticle" => $values['quantite'],
+									"prixuhtarticle" => $values['pu_HT'],
+									"prixthtarticle" => $values['pt_HT'],
+									"nomdocarticle" => $values['nom_document'],
+									"matriculeentreprisearticle" => $values['code_en_art_doc'],
+									"depotdocarticle" => $values['depot_doc'],
+									"clientdocarticle" => $values['code_client_document'],
+									"agencedocarticle" => $values['code_agence_doc'],
+									"prixthtdocarticle" => $values['pt_ht_document'],
+									"prixtttcdocarticle" => $values['pt_ttc_document'],
+									"detterestantearticle" => $values['dette_restante'],
+									"datecreationarticle" => $values['date_creer_art_doc']
+								);
+								$response = $this->home->saveinformation($valinputs);
+							}
+						}
+					}
+				}
+			}
+		}
